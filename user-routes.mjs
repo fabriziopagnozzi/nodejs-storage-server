@@ -1,8 +1,8 @@
 import {mkdir, readFile, writeFile, rm} from "fs/promises";
-import {createHash, randomBytes} from "crypto";
+import {createHash} from "crypto";
 import jwt from "jsonwebtoken";
-import {v4 as uuidv4} from "uuid";
-import {verifyToken, getUserID} from "./auth-utils.mjs";
+import {getUserID} from "./auth-utils.mjs";
+import {authenticate} from "./pre-handlers.mjs";
 
 const userdataSchema = {
     type: "object",
@@ -26,8 +26,8 @@ async function routes(fastify, options) {
             const {email, password} = req.body;
             const hashedPassword = createHash("sha256").update(password).digest("hex");
 
-            // reading the users file, checking if there's already an user
-            // registered under the current email; if not so, adding new email & password to file
+            // reading the users' file, checking if there's already a user
+            // registered under the current email; if not so, adding new email and password to file
             try {
                 let users = JSON.parse(await readFile("data/users.json"));
 
@@ -67,7 +67,7 @@ async function routes(fastify, options) {
             const {email, password} = req.body;
             const hashedPassword = createHash("sha256").update(password).digest("hex");
 
-            // reading the users file, checking if there's already an user
+            // reading the users' file, checking if there's already a user
             // registered under the current email, finally add the new user to the file
             try {
                 let users = JSON.parse(await readFile("data/users.json"));
@@ -94,15 +94,9 @@ async function routes(fastify, options) {
         },
     );
 
-    fastify.delete("/delete", async (req, reply) => {
-        let email;
-        try {
-            email = await verifyToken(req);
-        } catch (e) {
-            return reply.code(e.code).send(e.msg);
-        }
+    fastify.delete("/delete", {preHandler: authenticate}, async (req, reply) => {
+        let email = req.userInfo;
 
-        // delete the user
         try {
             let users = JSON.parse(await readFile("data/users.json"));
             let userIDs = JSON.parse(await readFile("data/userIDs.json"));
@@ -121,8 +115,7 @@ async function routes(fastify, options) {
         } catch (e) {
             fastify.log.error(e);
             if (e.code)
-                return reply.code(e.code)
-                    .send(e.msg);
+                return reply.code(e.code).send(e.msg);
             else
                 return reply.code(500)
                     .send({body: "Server error, try again later"});

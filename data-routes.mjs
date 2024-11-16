@@ -58,6 +58,7 @@ async function routes(fastify, options) {
         }
     );
 
+
     fastify.get("/data/:key", {preHandler: authenticateAndLoadData},
         async (req, reply) => {
             const {email, userData} = req.userInfo;
@@ -72,13 +73,13 @@ async function routes(fastify, options) {
         }
     );
 
+
     // PATCH expects the resource to be present, otherwise returns an error to the client
     fastify.patch("/data/:key", {schema: {body: patchSchema}, preHandler: authenticateAndLoadData},
         async (req, reply) => {
             const {key} = req.params;
             const {userID, userData} = req.userInfo;
 
-            // update the data
             try {
                 if (userData[key]) {
                     userData[key] = req.body.data;
@@ -98,12 +99,12 @@ async function routes(fastify, options) {
         }
     );
 
+
     fastify.delete("/data/:key", {preHandler: authenticateAndLoadData},
         async (req, reply) => {
             const {key} = req.params;
             const {email, userID, userData} = req.userInfo;
 
-            // delete the data.
             try {
                 if (userData[key]) {
                     delete userData[key];
@@ -116,7 +117,6 @@ async function routes(fastify, options) {
                 }
             } catch (e) {
                 fastify.log.error(e);
-
                 if (e.code === "ENOENT") {
                     return reply.code(500)
                         .send({body: "Error in server file system, try again later"});

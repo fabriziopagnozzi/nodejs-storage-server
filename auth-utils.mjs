@@ -2,7 +2,7 @@ import {readFile, writeFile} from "fs/promises";
 import jwt from "jsonwebtoken";
 import {v4 as uuidv4} from "uuid";
 
-const secretKey = await readFile("data/key.txt");
+const secretKey = await readFile("data/key.txt", "utf-8");
 const userDataPath = "data/users-data";
 
 async function verifyToken(req) {
@@ -11,7 +11,7 @@ async function verifyToken(req) {
     try {
         // decode the token and get email and user role
         let {email, isAdmin} = jwt.verify(token, secretKey);
-        let users = JSON.parse(await readFile("data/users.json"));
+        let users = JSON.parse(await readFile("data/users.json", "utf8"));
 
         // the email doesn't exist anymore in the users.json, throw an error
         if (!users[email])
@@ -35,8 +35,8 @@ async function verifyToken(req) {
 async function getUserID(email) {
     let userIDs, ID, users;
     try {
-        users = JSON.parse(await readFile("data/users.json")); // assumed to exist
-        userIDs = JSON.parse(await readFile("data/userIDs.json"));
+        users = JSON.parse(await readFile("data/users.json", "utf-8")); // assumed to exist
+        userIDs = JSON.parse(await readFile("data/userIDs.json", "utf-8"));
     } catch (e) {
         console.log(e);
         userIDs = {};
@@ -58,7 +58,7 @@ async function loadUserData(email) {
     let userID, userData;
     try {
         userID = await getUserID(email);
-        userData = JSON.parse(await readFile(`${userDataPath}/${userID}/keys.json`));
+        userData = JSON.parse(await readFile(`${userDataPath}/${userID}/keys.json`, 'utf-8'));
     } catch (e) {
         if (e.code === "ENOENT")
             throw {code: 404, msg: {body: "No such file found"}};

@@ -29,7 +29,7 @@ async function routes(fastify, options) {
             // reading the users' file, checking if there's already a user
             // registered under the current email; if not so, adding new email and password to file
             try {
-                let users = JSON.parse(await readFile("data/users.json"));
+                let users = JSON.parse(await readFile("data/users.json", "utf-8"));
 
                 if (users[email])
                     return reply.code(400)
@@ -62,6 +62,7 @@ async function routes(fastify, options) {
         },
     );
 
+
     fastify.post("/login", {schema: {body: userdataSchema}},
         async (req, reply) => {
             const {email, password} = req.body;
@@ -70,11 +71,11 @@ async function routes(fastify, options) {
             // reading the users' file, checking if there's already a user
             // registered under the current email, finally add the new user to the file
             try {
-                let users = JSON.parse(await readFile("data/users.json"));
+                let users = JSON.parse(await readFile("data/users.json", "utf-8"));
 
                 if (!users[email]) {
-                    return reply.code(400)
-                        .send({body: "Unrecognized user"});
+                    return reply.code(403)
+                        .send({body: "Unauthorized, user doesn't exist"});
                 } else if (users[email] === hashedPassword) {
                     let isAdmin = email === "admin@admin.admin";
                     const payload = {email, isAdmin};
@@ -94,12 +95,13 @@ async function routes(fastify, options) {
         },
     );
 
+
     fastify.delete("/delete", {preHandler: authenticate}, async (req, reply) => {
         let email = req.userInfo;
 
         try {
-            let users = JSON.parse(await readFile("data/users.json"));
-            let userIDs = JSON.parse(await readFile("data/userIDs.json"));
+            let users = JSON.parse(await readFile("data/users.json", "utf-8"));
+            let userIDs = JSON.parse(await readFile("data/userIDs.json", "utf-8"));
             let userID = await getUserID(email);
             delete users[email];
             delete userIDs[email];

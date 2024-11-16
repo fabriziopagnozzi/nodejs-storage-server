@@ -23,8 +23,8 @@ async function testServer(endpoint, method, tokenFile, msg) {
     try {
         let url = `http://localhost:3000${endpoint}`;
         let res = await fetch(url, {method, headers, body});
-        res = await res.json();
-        console.log(res);
+        let responseBody = await res.json();
+        await console.log(`code: ${res.status}\n`, responseBody, '\n');
 
         // in the login case, write the new token if the request was successful
         if (url.endsWith("login") && res.token)
@@ -34,14 +34,14 @@ async function testServer(endpoint, method, tokenFile, msg) {
     }
 }
 
-let tests = JSON.parse(await readFile('data/tests.json'));
+let tests = JSON.parse(await readFile('data/tests.json', 'utf-8'));
 
 let i = 1;
 for (const testCase of tests) {
     if (!existsSync('./tokens'))
         await mkdir('tokens')
 
-    console.log(`${i}:`)
+    process.stdout.write(`${i}) `)
     await testServer(...testCase);
     i++;
 }

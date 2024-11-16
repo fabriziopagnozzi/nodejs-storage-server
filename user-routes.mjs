@@ -3,15 +3,7 @@ import {createHash} from "crypto";
 import jwt from "jsonwebtoken";
 import {getUserID} from "./auth-utils.mjs";
 import {authenticate} from "./pre-handlers.mjs";
-
-const userdataSchema = {
-    type: "object",
-    required: ["email", "password"],
-    properties: {
-        email: {type: "string", format: "email"},
-        password: {type: "string", minLength: 8},
-    },
-};
+import {userdataSchema} from "./schemas.mjs";
 
 // the key used to generate and validate tokens is unique and stored in the key.txt file
 const secretKey = await readFile("data/key.txt", "utf-8");
@@ -25,15 +17,15 @@ async function routes(fastify, options) {
     fastify.post("/register", {schema: {body: userdataSchema}},
         async (req, reply) => {
             const {email, password} = req.body;
-            const hashedPassword = createHash("sha256").update(password).digest("hex");
+            const hashedPassword = createHash("sha256")
+                .update(password).digest("hex");
 
             // reading the users' file, checking if there's already a user
             // registered under the current email; if not so, adding new email and password to file
             let users = JSON.parse(await readFile("data/users.json", "utf-8"));
 
             if (users[email])
-                return reply.code(400)
-                    .send({body: "User already registered"});
+                return reply.code(400).send({body: "User already registered"});
             else {
                 users[email] = hashedPassword;
 
@@ -55,7 +47,8 @@ async function routes(fastify, options) {
     fastify.post("/login", {schema: {body: userdataSchema}},
         async (req, reply) => {
             const {email, password} = req.body;
-            const hashedPassword = createHash("sha256").update(password).digest("hex");
+            const hashedPassword = createHash("sha256")
+                .update(password).digest("hex");
 
             // reading the users' file, checking if there's already a user
             // registered under the current email, finally add the new user to the file
@@ -66,7 +59,7 @@ async function routes(fastify, options) {
             } else if (users[email] === hashedPassword) {
                 let isAdmin = email === "admin@admin.admin";
                 const payload = {email, isAdmin};
-                const token = jwt.sign(payload, secretKey, {expiresIn: '1s'});
+                const token = jwt.sign(payload, secretKey, {expiresIn: '48h'});
                 return reply.code(200).send({token});
             } else
                 return reply.code(400).send({body: "Invalid password"});
@@ -76,7 +69,6 @@ async function routes(fastify, options) {
 
     fastify.delete("/delete", {preHandler: authenticate}, async (req, reply) => {
         let email = req.userInfo;
-
         let users = JSON.parse(await readFile("data/users.json", "utf-8"));
         let userIDs = JSON.parse(await readFile("data/userIDs.json", "utf-8"));
         let userID = await getUserID(email);

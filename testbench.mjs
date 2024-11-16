@@ -38,9 +38,8 @@ let tests = JSON.parse(await readFile('data/tests.json', 'utf-8'));
 
 let i = 1;
 for (const testCase of tests) {
-    if (!existsSync('./tokens'))
+    if (!existsSync('tokens'))
         await mkdir('tokens')
-
     process.stdout.write(`${i}) `)
     await testServer(...testCase);
     i++;

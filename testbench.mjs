@@ -24,7 +24,7 @@ async function testServer(endpoint, method, tokenFile, msg) {
         let url = `http://localhost:3000${endpoint}`;
         let res = await fetch(url, {method, headers, body});
         let responseBody = await res.json();
-        await console.log(`code: ${res.status}\n`, responseBody, '\n');
+        console.log(`Code`, res.status, `\n`, responseBody, `\n`);
 
         // in the login case, write the new token if the request was successful
         if (url.endsWith("login") && res.token)

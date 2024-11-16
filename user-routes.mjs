@@ -20,7 +20,6 @@ const secretKey = await readFile("data/key.txt", "utf-8");
 const userDataPath = "data/users-data";
 
 
-
 async function routes(fastify, options) {
 
     fastify.post("/register", {schema: {body: userdataSchema}},
@@ -47,8 +46,7 @@ async function routes(fastify, options) {
                 await mkdir(`${userDataPath}/${userID}`, {recursive: true});
                 await writeFile(`${userDataPath}/${userID}/keys.json`, "{}");
 
-                return reply.code(200)
-                    .send({body: `User ${email} correctly registered`});
+                return reply.code(200).send({body: `User ${email} correctly registered`});
             }
         },
     );

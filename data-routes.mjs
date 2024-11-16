@@ -40,13 +40,11 @@ async function routes(fastify, options) {
 
             // Add the data. If the key already exists, don't do anything and return an error
             if (userData[key]) {
-                return reply.code(400)
-                    .send({body: "The key already exists"});
+                return reply.code(400).send({body: "The key already exists"});
             } else {
                 userData[key] = data;
                 await writeFile(`${userDataPath}/${userID}/keys.json`, JSON.stringify(userData));
-                return reply.code(200)
-                    .send({body: `Key ${key} successfully added for user ${email}`});
+                return reply.code(200).send({body: `Key ${key} successfully added for user ${email}`});
             }
         }
     );
@@ -54,15 +52,13 @@ async function routes(fastify, options) {
 
     fastify.get("/data/:key", {preHandler: authenticateAndLoadData},
         async (req, reply) => {
-            const {email, userData} = req.userInfo;
             const {key} = req.params;
+            const {email, userData} = req.userInfo;
 
             if (userData[key])
-                return reply.code(200)
-                    .send({key, data: userData[key]});
+                return reply.code(200).send({key, data: userData[key]});
             else
-                return reply.code(404)
-                    .send({body: `No such file found for the user ${email}`});
+                return reply.code(404).send({body: `No such file found for the user ${email}`});
         }
     );
 
@@ -77,11 +73,9 @@ async function routes(fastify, options) {
                 userData[key] = req.body.data;
                 await writeFile(`${userDataPath}/${userID}/keys.json`, JSON.stringify(userData));
 
-                return reply.code(200)
-                    .send({body: "Resource correctly updated"});
+                return reply.code(200).send({body: "Resource correctly updated"});
             } else
-                return reply.code(400)
-                    .send({body: "The resource to update does not exist"});
+                return reply.code(400).send({body: "The resource to update does not exist"});
         }
     );
 
@@ -94,11 +88,9 @@ async function routes(fastify, options) {
             if (userData[key]) {
                 delete userData[key];
                 await writeFile(`${userDataPath}/${userID}/keys.json`, JSON.stringify(userData));
-                return reply.code(200)
-                    .send({body: `Resource deleted for user ${email}`});
+                return reply.code(200).send({body: `Resource deleted for user ${email}`});
             } else {
-                return reply.code(400)
-                    .send({body: "The resource to delete does not exist"});
+                return reply.code(400).send({body: "The resource to delete does not exist"});
             }
         }
     );

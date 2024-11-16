@@ -14,10 +14,12 @@ const userdataSchema = {
 };
 
 // the key used to generate and validate tokens is unique and stored in the key.txt file
-const secretKey = await readFile("data/key.txt");
+const secretKey = await readFile("data/key.txt", "utf-8");
 // each user has their own directory under this path to store and read their own data
 // the admin can access and modify data within all user directories
 const userDataPath = "data/users-data";
+
+
 
 async function routes(fastify, options) {
 
@@ -28,36 +30,25 @@ async function routes(fastify, options) {
 
             // reading the users' file, checking if there's already a user
             // registered under the current email; if not so, adding new email and password to file
-            try {
-                let users = JSON.parse(await readFile("data/users.json", "utf-8"));
+            let users = JSON.parse(await readFile("data/users.json", "utf-8"));
 
-                if (users[email])
-                    return reply.code(400)
-                        .send({body: "User already registered"});
-                else {
-                    users[email] = hashedPassword;
+            if (users[email])
+                return reply.code(400)
+                    .send({body: "User already registered"});
+            else {
+                users[email] = hashedPassword;
 
-                    // save the user login info in the users.json file
-                    await writeFile("data/users.json", JSON.stringify(users));
+                // save the user login info in the users.json file
+                await writeFile("data/users.json", JSON.stringify(users));
 
-                    // each user will post their {key, value} pairs in a separate directory
-                    // each user can retrieve only their own data
-                    let userID = await getUserID(email);
-                    await mkdir(`${userDataPath}/${userID}`, {recursive: true});
-                    await writeFile(`${userDataPath}/${userID}/keys.json`, "{}");
+                // each user will post their {key, value} pairs in a separate directory
+                // each user can retrieve only their own data
+                let userID = await getUserID(email);
+                await mkdir(`${userDataPath}/${userID}`, {recursive: true});
+                await writeFile(`${userDataPath}/${userID}/keys.json`, "{}");
 
-                    return reply.code(200)
-                        .send({body: `User ${email} correctly registered`});
-                }
-
-            } catch (e) {
-                fastify.log.error(e);
-                if (e.code)
-                    return reply.code(e.code)
-                        .send(e.msg);
-                else
-                    return reply.code(500)
-                        .send({body: "Error in server file system, try again later"});
+                return reply.code(200)
+                    .send({body: `User ${email} correctly registered`});
             }
         },
     );
@@ -70,58 +61,37 @@ async function routes(fastify, options) {
 
             // reading the users' file, checking if there's already a user
             // registered under the current email, finally add the new user to the file
-            try {
-                let users = JSON.parse(await readFile("data/users.json", "utf-8"));
+            let users = JSON.parse(await readFile("data/users.json", "utf-8"));
 
-                if (!users[email]) {
-                    return reply.code(403)
-                        .send({body: "Unauthorized, user doesn't exist"});
-                } else if (users[email] === hashedPassword) {
-                    let isAdmin = email === "admin@admin.admin";
-                    const payload = {email, isAdmin};
-                    const token = jwt.sign(payload, secretKey, {expiresIn: "6h"});
-                    return reply.code(200)
-                        .send({token});
-                } else {
-                    return reply.code(400)
-                        .send({body: "Invalid password"});
-                }
-
-            } catch (e) {
-                fastify.log.error(e);
-                return reply.code(500)
-                    .send({body: "Server error, try again later"});
-            }
-        },
+            if (!users[email]) {
+                return reply.code(403).send({body: "Unauthorized, user doesn't exist"});
+            } else if (users[email] === hashedPassword) {
+                let isAdmin = email === "admin@admin.admin";
+                const payload = {email, isAdmin};
+                const token = jwt.sign(payload, secretKey, {expiresIn: '1s'});
+                return reply.code(200).send({token});
+            } else
+                return reply.code(400).send({body: "Invalid password"});
+        }
     );
 
 
     fastify.delete("/delete", {preHandler: authenticate}, async (req, reply) => {
         let email = req.userInfo;
 
-        try {
-            let users = JSON.parse(await readFile("data/users.json", "utf-8"));
-            let userIDs = JSON.parse(await readFile("data/userIDs.json", "utf-8"));
-            let userID = await getUserID(email);
-            delete users[email];
-            delete userIDs[email];
+        let users = JSON.parse(await readFile("data/users.json", "utf-8"));
+        let userIDs = JSON.parse(await readFile("data/userIDs.json", "utf-8"));
+        let userID = await getUserID(email);
+        delete users[email];
+        delete userIDs[email];
 
-            // remove the directory storing user data
-            await rm(`${userDataPath}/${userID}`, {recursive: true, force: true});
-            // update user login info and userID info
-            await writeFile("data/users.json", JSON.stringify(users));
-            await writeFile("data/userIDs.json", JSON.stringify(userIDs));
+        // remove the directory storing user data
+        await rm(`${userDataPath}/${userID}`, {recursive: true, force: true});
+        // update user login info and userID info
+        await writeFile("data/users.json", JSON.stringify(users));
+        await writeFile("data/userIDs.json", JSON.stringify(userIDs));
 
-            reply.code(200)
-                .send({body: `Successfully deleted user ${email} and all their data`});
-        } catch (e) {
-            fastify.log.error(e);
-            if (e.code)
-                return reply.code(e.code).send(e.msg);
-            else
-                return reply.code(500)
-                    .send({body: "Server error, try again later"});
-        }
+        reply.code(200).send({body: `Successfully deleted user ${email} and all their data`});
     });
 }
 

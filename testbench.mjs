@@ -27,8 +27,10 @@ async function testServer(endpoint, method, tokenFile, msg) {
         console.log(`Code`, res.status, `\n`, responseBody, `\n`);
 
         // in the login case, write the new token if the request was successful
-        if (url.endsWith("login") && res.token)
-            await writeFile(`tokens/${tokenFile}`, res.token);
+        if (url.endsWith("login") && responseBody.token){
+            await writeFile(`tokens/${tokenFile}`, responseBody.token);
+            console.log("porco")
+        }
     } catch (e) {
         console.error(e);
     }

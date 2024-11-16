@@ -39,21 +39,14 @@ async function routes(fastify, options) {
             const {key, data} = req.body;
 
             // Add the data. If the key already exists, don't do anything and return an error
-            try {
-                if (userData[key]) {
-                    return reply.code(400)
-                        .send({body: "The key already exists"});
-                } else {
-                    userData[key] = data;
-                    await writeFile(`${userDataPath}/${userID}/keys.json`, JSON.stringify(userData));
-                    return reply.code(200)
-                        .send({body: `Key ${key} successfully added for user ${email}`});
-                }
-            } catch (e) {
-                fastify.log.error(e);
-                if (e.code === "ENOENT")
-                    return reply.code(500)
-                        .send({body: "Error in server file system, try again later"});
+            if (userData[key]) {
+                return reply.code(400)
+                    .send({body: "The key already exists"});
+            } else {
+                userData[key] = data;
+                await writeFile(`${userDataPath}/${userID}/keys.json`, JSON.stringify(userData));
+                return reply.code(200)
+                    .send({body: `Key ${key} successfully added for user ${email}`});
             }
         }
     );
@@ -80,22 +73,15 @@ async function routes(fastify, options) {
             const {key} = req.params;
             const {userID, userData} = req.userInfo;
 
-            try {
-                if (userData[key]) {
-                    userData[key] = req.body.data;
-                    await writeFile(`${userDataPath}/${userID}/keys.json`, JSON.stringify(userData));
+            if (userData[key]) {
+                userData[key] = req.body.data;
+                await writeFile(`${userDataPath}/${userID}/keys.json`, JSON.stringify(userData));
 
-                    return reply.code(200)
-                        .send({body: "Resource correctly updated"});
-                } else
-                    return reply.code(400)
-                        .send({body: "The resource to update does not exist"});
-            } catch (e) {
-                fastify.log.error(e);
-                if (e.code === "ENOENT")
-                    return reply.code(500)
-                        .send({body: "Error in server file system, try again later"});
-            }
+                return reply.code(200)
+                    .send({body: "Resource correctly updated"});
+            } else
+                return reply.code(400)
+                    .send({body: "The resource to update does not exist"});
         }
     );
 
@@ -105,22 +91,14 @@ async function routes(fastify, options) {
             const {key} = req.params;
             const {email, userID, userData} = req.userInfo;
 
-            try {
-                if (userData[key]) {
-                    delete userData[key];
-                    await writeFile(`${userDataPath}/${userID}/keys.json`, JSON.stringify(userData));
-                    return reply.code(200)
-                        .send({body: `Resource deleted for user ${email}`});
-                } else {
-                    return reply.code(400)
-                        .send({body: "The resource to delete does not exist"});
-                }
-            } catch (e) {
-                fastify.log.error(e);
-                if (e.code === "ENOENT") {
-                    return reply.code(500)
-                        .send({body: "Error in server file system, try again later"});
-                }
+            if (userData[key]) {
+                delete userData[key];
+                await writeFile(`${userDataPath}/${userID}/keys.json`, JSON.stringify(userData));
+                return reply.code(200)
+                    .send({body: `Resource deleted for user ${email}`});
+            } else {
+                return reply.code(400)
+                    .send({body: "The resource to delete does not exist"});
             }
         }
     );

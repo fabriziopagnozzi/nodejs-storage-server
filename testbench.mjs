@@ -5,7 +5,8 @@ async function testServer(endpoint, method, tokenFile, msg) {
     let jwtToken;
     try {
         jwtToken = await readFile(`tokens/${tokenFile}`);
-    } catch (e) {}
+    } catch (e) {
+    }
 
     let headers, body;
     if (["POST", "PUT", "PATCH"].includes(method)) {
@@ -34,13 +35,41 @@ async function testServer(endpoint, method, tokenFile, msg) {
     }
 }
 
-let tests = JSON.parse(await readFile('data/tests.json', 'utf-8'));
 
-let i = 1;
-for (const testCase of tests) {
+async function normalTests() {
+    let tests = JSON.parse(await readFile('data/tests.json', 'utf-8'));
+
+    let i = 1;
+    for (const testCase of tests) {
+        if (!existsSync('tokens'))
+            await mkdir('tokens')
+        process.stdout.write(`${i}) `)
+        await testServer(...testCase);
+        i++;
+    }
+}
+
+
+async function randomizedTests(num, log = false)  {
+    let tests = JSON.parse(await readFile('data/tests.json', 'utf-8'))
+    let testHistory = [];
     if (!existsSync('tokens'))
         await mkdir('tokens')
-    process.stdout.write(`${i}) `)
-    await testServer(...testCase);
-    i++;
+
+    for (let i = 0; i < num; i++) {
+        let rnd = Math.floor(Math.random() * 32);
+        process.stdout.write(`${i}) `)
+        await testServer(...(tests[rnd]));
+        if (log) testHistory.push(tests[rnd]);
+    }
+
+    if (log) {
+        testHistory.push(tests[30]);
+        testHistory.push(tests[31]);
+        let newlineJson = JSON.stringify(testHistory).replaceAll("],", "],\n");
+        await writeFile(`data/testsHistory.json`, newlineJson);
+
+    }
 }
+
+await randomizedTests(1000)

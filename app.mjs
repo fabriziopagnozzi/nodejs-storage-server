@@ -10,7 +10,7 @@ fastify.setErrorHandler((e, req, reply) => {
         reply.code(404).send({body: "Session token expired, please login again"});
     else if (e.code === "ENOENT")
         reply.code(404).send({body: "No such file found"});
-    else if (e.code)
+    else if (typeof e.code === 'number')
         reply.code(e.code).send(e.msg);
     else
         reply.send(e);

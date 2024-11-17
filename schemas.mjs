@@ -5,9 +5,8 @@ const postSchema = {
         key: {type: "string"},
         data: {
             type: "string",
-            // pattern contains the regexp for base64 strings
-            pattern:
-                "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
+            // regexp for base64 strings
+            pattern: "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
         },
     }
 };
@@ -18,8 +17,7 @@ const patchSchema = {
     properties: {
         data: {
             type: "string",
-            pattern:
-                "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
+            pattern: "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
         },
     }
 };

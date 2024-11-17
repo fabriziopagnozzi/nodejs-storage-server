@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import {getUserID} from "./auth-utils.mjs";
 import {authenticate} from "./pre-handlers.mjs";
 import {userLoginSchema} from "./schemas.mjs";
-import {ServerError} from "./app.mjs";
+import {ServerError} from "./errors.mjs";
 
 // the key used to generate and validate tokens is unique and stored in the key.txt file
 const secretKey = await readFile("data/key.txt", "utf-8");
@@ -42,7 +42,7 @@ async function routes(fastify, options) {
 
                 return reply.code(200).send({body: `User ${email} correctly registered`});
             }
-        },
+        }
     );
 
 
@@ -71,14 +71,12 @@ async function routes(fastify, options) {
 
     fastify.delete("/delete", {preHandler: authenticate}, async (req, reply) => {
         let email = req.userInfo;
-        let userID = await getUserID(email);
-
+        let userID = await getUserID(email); // throws error if user is not registered
         let users = JSON.parse(await readFile("data/users.json", "utf-8"));
         delete users[email];
 
-        // remove the directory storing user data
+        // remove the directory storing user data and update user info
         await rm(`${userDataPath}/${userID}`, {recursive: true, force: true});
-        // update user login info and userID info
         await writeFile("data/users.json", JSON.stringify(users));
 
         reply.code(200).send({body: `Successfully deleted user ${email} and all their data`});

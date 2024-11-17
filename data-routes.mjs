@@ -1,7 +1,8 @@
 import {writeFile} from "fs/promises";
 import {authenticateAndLoadData} from "./pre-handlers.mjs";
 import {postSchema, patchSchema} from "./schemas.mjs";
-import {ServerError} from "./app.mjs";
+import {ServerError} from "./errors.mjs";
+
 // each user has their own directory under "data/users-data" to store and read their own data
 // the admin can access and modify data within all user directories
 const userDataPath = "data/users-data";

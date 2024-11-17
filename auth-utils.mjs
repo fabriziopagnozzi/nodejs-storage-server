@@ -1,7 +1,7 @@
 import {readFile, writeFile} from "fs/promises";
 import jwt from "jsonwebtoken";
 import {v4 as uuidv4} from "uuid";
-import {ServerError} from "./app.mjs"
+import {ServerError} from "./errors.mjs"
 
 const secretKey = await readFile("data/key.txt", "utf-8");
 const userDataPath = "data/users-data";

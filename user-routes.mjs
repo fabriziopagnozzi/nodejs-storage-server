@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import {getUserID} from "./auth-utils.mjs";
 import {authenticate} from "./pre-handlers.mjs";
 import {userdataSchema} from "./schemas.mjs";
+import {ServerError} from "./app.mjs";
 
 // the key used to generate and validate tokens is unique and stored in the key.txt file
 const secretKey = await readFile("data/key.txt", "utf-8");
@@ -25,7 +26,7 @@ async function routes(fastify, options) {
             let users = JSON.parse(await readFile("data/users.json", "utf-8"));
 
             if (users[email])
-                return reply.code(400).send({body: "User already registered"});
+                throw new ServerError(400, {body: "User already registered"})
             else {
                 users[email] = hashedPassword;
 
@@ -54,15 +55,15 @@ async function routes(fastify, options) {
             // registered under the current email, finally add the new user to the file
             let users = JSON.parse(await readFile("data/users.json", "utf-8"));
 
-            if (!users[email]) {
-                return reply.code(403).send({body: "Unauthorized, user doesn't exist"});
-            } else if (users[email] === hashedPassword) {
+            if (!users[email])
+                throw new ServerError(403, {body: "Unauthorized, user doesn't exist"})
+            else if (users[email] === hashedPassword) {
                 let isAdmin = email === "admin@admin.admin";
                 const payload = {email, isAdmin};
                 const token = jwt.sign(payload, secretKey, {expiresIn: '48h'});
                 return reply.code(200).send({token});
             } else
-                return reply.code(400).send({body: "Invalid password"});
+                throw new ServerError(400, {body: "Invalid password"})
         }
     );
 

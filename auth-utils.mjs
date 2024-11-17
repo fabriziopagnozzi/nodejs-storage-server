@@ -1,6 +1,7 @@
 import {readFile, writeFile} from "fs/promises";
 import jwt from "jsonwebtoken";
 import {v4 as uuidv4} from "uuid";
+import {ServerError} from "./app.mjs"
 
 const secretKey = await readFile("data/key.txt", "utf-8");
 const userDataPath = "data/users-data";
@@ -15,7 +16,7 @@ async function verifyToken(req) {
 
     // the email doesn't exist anymore in the users.json, throw an error
     if (!users[email])
-        throw {code: 403, msg: {body: "Unauthorized, user doesn't exist"}};
+        throw new ServerError(403, {body: "Unauthorized, user doesn't exist"});
     else if (isAdmin && req.query.user)
         // the admin can do anything to any possible user specified in the user query argument
         return req.query.user;
@@ -40,7 +41,7 @@ async function getUserID(email) {
         userIDs[email] = ID;
         await writeFile("data/userIDs.json", JSON.stringify(userIDs));
     } else
-        throw {code: 404, msg: {body: `No user registered under the email ${email}`}};
+        throw new ServerError(404, {body: `No user registered under the email ${email}`});
 
     return ID;
 }

@@ -1,6 +1,7 @@
 import {writeFile} from "fs/promises";
 import {authenticateAndLoadData} from "./pre-handlers.mjs";
 import {postSchema, patchSchema} from "./schemas.mjs";
+import {ServerError} from "./app.mjs";
 // each user has their own directory under "data/users-data" to store and read their own data
 // the admin can access and modify data within all user directories
 const userDataPath = "data/users-data";
@@ -14,7 +15,7 @@ async function routes(fastify, options) {
 
             // Add the data. If the key already exists, don't do anything and return an error
             if (userData[key])
-                return reply.code(400).send({body: "The key already exists"});
+                throw new ServerError(400, {body: "The key already exists"})
             else {
                 userData[key] = data;
                 await writeFile(`${userDataPath}/${userID}/keys.json`, JSON.stringify(userData));
@@ -32,7 +33,7 @@ async function routes(fastify, options) {
             if (userData[key])
                 return reply.code(200).send({key, data: userData[key]});
             else
-                return reply.code(404).send({body: `No such key found for the user ${email}`});
+                throw new ServerError(404, {body: `No such key found for the user ${email}`})
         }
     );
 
@@ -48,7 +49,7 @@ async function routes(fastify, options) {
                 await writeFile(`${userDataPath}/${userID}/keys.json`, JSON.stringify(userData));
                 return reply.code(200).send({body: "Resource correctly updated"});
             } else
-                return reply.code(400).send({body: "The resource to update does not exist"});
+                throw new ServerError(400, {body: "The resource to update does not exist"})
         }
     );
 
@@ -63,7 +64,7 @@ async function routes(fastify, options) {
                 await writeFile(`${userDataPath}/${userID}/keys.json`, JSON.stringify(userData));
                 return reply.code(200).send({body: `Resource deleted for user ${email}`});
             } else
-                return reply.code(400).send({body: "The resource to delete does not exist"});
+                throw new ServerError(400, {body: "The resource to delete does not exist"})
         }
     );
 }

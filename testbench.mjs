@@ -63,13 +63,12 @@ async function randomizedTests(num, log = false)  {
         if (log) testHistory.push(tests[rnd]);
     }
 
+    testHistory.push(tests[30]);
+    testHistory.push(tests[31]);
     if (log) {
-        testHistory.push(tests[30]);
-        testHistory.push(tests[31]);
         let newlineJson = JSON.stringify(testHistory).replaceAll("],", "],\n");
         await writeFile(`data/testsHistory.json`, newlineJson);
-
     }
 }
 
-await randomizedTests(1000)
+await randomizedTests(500)

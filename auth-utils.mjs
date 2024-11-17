@@ -6,17 +6,17 @@ import {ServerError} from "./app.mjs"
 const secretKey = await readFile("data/key.txt", "utf-8");
 const userDataPath = "data/users-data";
 
+
 async function verifyToken(req) {
     const token = req.headers.authorization.split(" ")[1]; // Bearer <token>
 
     // decode the token and get email and user role
-    let obj = jwt.verify(token, secretKey);
-    let {email, isAdmin} = obj;
+    const {email, isAdmin} = jwt.verify(token, secretKey);
     let users = JSON.parse(await readFile("data/users.json", "utf8"));
 
-    // the email doesn't exist anymore in the users.json, throw an error
+    // if the email doesn't exist anymore in the users.json, throw an error
     if (!users[email])
-        throw new ServerError(403, {body: "Unauthorized, user doesn't exist"});
+        throw new ServerError(403, "Unauthorized, user doesn't exist");
     else if (isAdmin && req.query.user)
         // the admin can do anything to any possible user specified in the user query argument
         return req.query.user;
@@ -24,27 +24,23 @@ async function verifyToken(req) {
         return email;
 }
 
-async function getUserID(email) {
-    let userIDs, ID, users;
-    try {
-        users = JSON.parse(await readFile("data/users.json", "utf-8")); // assumed to exist
-        userIDs = JSON.parse(await readFile("data/userIDs.json", "utf-8"));
-    } catch (e) {
-        console.log(e);
-        userIDs = {};
-    }
 
-    if (userIDs[email])
-        ID = userIDs[email];
-    else if (users[email]) {
+async function getUserID(email) {
+    let ID, users;
+    users = JSON.parse(await readFile("data/users.json", "utf-8")); // assumed to exist
+
+    if (!users[email])
+        throw new ServerError(404, `No user registered under the email ${email}`);
+    else if (users[email] && !users[email].userID) {
         ID = uuidv4();
-        userIDs[email] = ID;
-        await writeFile("data/userIDs.json", JSON.stringify(userIDs));
+        users[email].userID = ID;
+        await writeFile("data/users.json", JSON.stringify(users));
     } else
-        throw new ServerError(404, {body: `No user registered under the email ${email}`});
+        ID = users[email].userID;
 
     return ID;
 }
+
 
 async function loadUserData(email) {
     let userID, userData;
@@ -52,5 +48,6 @@ async function loadUserData(email) {
     userData = JSON.parse(await readFile(`${userDataPath}/${userID}/keys.json`, 'utf-8'));
     return {userID, userData};
 }
+
 
 export {getUserID, verifyToken, loadUserData};

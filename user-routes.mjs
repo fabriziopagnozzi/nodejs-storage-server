@@ -3,7 +3,7 @@ import {createHash} from "crypto";
 import jwt from "jsonwebtoken";
 import {getUserID} from "./auth-utils.mjs";
 import {authenticate} from "./pre-handlers.mjs";
-import {userdataSchema} from "./schemas.mjs";
+import {userLoginSchema} from "./schemas.mjs";
 import {ServerError} from "./app.mjs";
 
 // the key used to generate and validate tokens is unique and stored in the key.txt file
@@ -15,7 +15,7 @@ const userDataPath = "data/users-data";
 
 async function routes(fastify, options) {
 
-    fastify.post("/register", {schema: {body: userdataSchema}},
+    fastify.post("/register", {schema: {body: userLoginSchema}},
         async (req, reply) => {
             const {email, password} = req.body;
             const hashedPassword = createHash("sha256")
@@ -26,9 +26,10 @@ async function routes(fastify, options) {
             let users = JSON.parse(await readFile("data/users.json", "utf-8"));
 
             if (users[email])
-                throw new ServerError(400, {body: "User already registered"})
+                throw new ServerError(400, "User already registered");
             else {
-                users[email] = hashedPassword;
+                users[email] = {}
+                users[email].password = hashedPassword;
 
                 // save the user login info in the users.json file
                 await writeFile("data/users.json", JSON.stringify(users));
@@ -45,7 +46,7 @@ async function routes(fastify, options) {
     );
 
 
-    fastify.post("/login", {schema: {body: userdataSchema}},
+    fastify.post("/login", {schema: {body: userLoginSchema}},
         async (req, reply) => {
             const {email, password} = req.body;
             const hashedPassword = createHash("sha256")
@@ -56,31 +57,29 @@ async function routes(fastify, options) {
             let users = JSON.parse(await readFile("data/users.json", "utf-8"));
 
             if (!users[email])
-                throw new ServerError(403, {body: "Unauthorized, user doesn't exist"})
-            else if (users[email] === hashedPassword) {
+                throw new ServerError(403, "Unauthorized, user doesn't exist");
+            else if (users[email].password === hashedPassword) {
                 let isAdmin = email === "admin@admin.admin";
                 const payload = {email, isAdmin};
                 const token = jwt.sign(payload, secretKey, {expiresIn: '48h'});
                 return reply.code(200).send({token});
             } else
-                throw new ServerError(400, {body: "Invalid password"})
+                throw new ServerError(400, "Invalid password");
         }
     );
 
 
     fastify.delete("/delete", {preHandler: authenticate}, async (req, reply) => {
         let email = req.userInfo;
-        let users = JSON.parse(await readFile("data/users.json", "utf-8"));
-        let userIDs = JSON.parse(await readFile("data/userIDs.json", "utf-8"));
         let userID = await getUserID(email);
+
+        let users = JSON.parse(await readFile("data/users.json", "utf-8"));
         delete users[email];
-        delete userIDs[email];
 
         // remove the directory storing user data
         await rm(`${userDataPath}/${userID}`, {recursive: true, force: true});
         // update user login info and userID info
         await writeFile("data/users.json", JSON.stringify(users));
-        await writeFile("data/userIDs.json", JSON.stringify(userIDs));
 
         reply.code(200).send({body: `Successfully deleted user ${email} and all their data`});
     });

@@ -24,7 +24,7 @@ const patchSchema = {
     }
 };
 
-const userdataSchema = {
+const userLoginSchema = {
     type: "object",
     required: ["email", "password"],
     properties: {
@@ -33,4 +33,4 @@ const userdataSchema = {
     },
 };
 
-export {postSchema, userdataSchema, patchSchema};
+export {postSchema, userLoginSchema, patchSchema};

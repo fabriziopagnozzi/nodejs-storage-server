@@ -15,7 +15,7 @@ async function routes(fastify, options) {
 
             // Add the data. If the key already exists, don't do anything and return an error
             if (userData[key])
-                throw new ServerError(400, {body: "The key already exists"})
+                throw new ServerError(400, "The key already exists")
             else {
                 userData[key] = data;
                 await writeFile(`${userDataPath}/${userID}/keys.json`, JSON.stringify(userData));
@@ -33,7 +33,7 @@ async function routes(fastify, options) {
             if (userData[key])
                 return reply.code(200).send({key, data: userData[key]});
             else
-                throw new ServerError(404, {body: `No such key found for the user ${email}`})
+                throw new ServerError(404, `No such key found for the user ${email}`)
         }
     );
 
@@ -49,7 +49,7 @@ async function routes(fastify, options) {
                 await writeFile(`${userDataPath}/${userID}/keys.json`, JSON.stringify(userData));
                 return reply.code(200).send({body: "Resource correctly updated"});
             } else
-                throw new ServerError(400, {body: "The resource to update does not exist"})
+                throw new ServerError(400, "The resource to update does not exist");
         }
     );
 
@@ -64,7 +64,7 @@ async function routes(fastify, options) {
                 await writeFile(`${userDataPath}/${userID}/keys.json`, JSON.stringify(userData));
                 return reply.code(200).send({body: `Resource deleted for user ${email}`});
             } else
-                throw new ServerError(400, {body: "The resource to delete does not exist"})
+                throw new ServerError(400, "The resource to delete does not exist");
         }
     );
 }

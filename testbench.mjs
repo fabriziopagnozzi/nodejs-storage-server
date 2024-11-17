@@ -25,7 +25,7 @@ async function testServer(endpoint, method, tokenFile, msg) {
         let url = `http://localhost:3000${endpoint}`;
         let res = await fetch(url, {method, headers, body});
         let responseBody = await res.json();
-        console.log(`Code`, res.status, `\n`, responseBody, `\n`);
+        console.log(responseBody, `\n`);
 
         // in the login case, write the new token if the request was successful
         if (url.endsWith("login") && responseBody.token)
@@ -57,7 +57,7 @@ async function randomizedTests(num, log = false)  {
         await mkdir('tokens')
 
     for (let i = 0; i < num; i++) {
-        let rnd = Math.floor(Math.random() * 32);
+        let rnd = Math.floor(Math.random() * tests.length);
         process.stdout.write(`${i}) `)
         await testServer(...(tests[rnd]));
         if (log) testHistory.push(tests[rnd]);
@@ -71,4 +71,4 @@ async function randomizedTests(num, log = false)  {
     }
 }
 
-await randomizedTests(500)
+await normalTests()

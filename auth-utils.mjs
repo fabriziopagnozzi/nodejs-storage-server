@@ -34,7 +34,7 @@ async function getUserID(email) {
     else if (users[email] && !users[email].userID) {
         ID = uuidv4();
         users[email].userID = ID;
-        await writeFile("data/users.json", JSON.stringify(users));
+        await writeFile("data/users.json", JSON.stringify(users, null, 2));
     } else
         ID = users[email].userID;
 
@@ -45,7 +45,7 @@ async function getUserID(email) {
 async function loadUserData(email) {
     let userID, userData;
     userID = await getUserID(email);
-    userData = JSON.parse(await readFile(`${userDataPath}/${userID}/keys.json`, 'utf-8'));
+    userData = JSON.parse(await readFile(`${userDataPath}/${userID}/keys.json`, "utf-8"));
     return {userID, userData};
 }
 

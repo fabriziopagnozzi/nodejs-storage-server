@@ -19,7 +19,8 @@ async function routes(fastify, options) {
                 throw new ServerError(400, "The key already exists")
             else {
                 userData[key] = data;
-                await writeFile(`${userDataPath}/${userID}/keys.json`, JSON.stringify(userData));
+                let dataToWrite = JSON.stringify(userData, null, 2);
+                await writeFile(`${userDataPath}/${userID}/keys.json`, dataToWrite);
                 return reply.code(200).send({body: `Key ${key} successfully added for user ${email}`});
             }
         }
@@ -47,7 +48,8 @@ async function routes(fastify, options) {
 
             if (userData[key]) {
                 userData[key] = req.body.data;
-                await writeFile(`${userDataPath}/${userID}/keys.json`, JSON.stringify(userData));
+                let dataToWrite = JSON.stringify(userData, null, 2);
+                await writeFile(`${userDataPath}/${userID}/keys.json`, dataToWrite);
                 return reply.code(200).send({body: "Resource correctly updated"});
             } else
                 throw new ServerError(400, "The resource to update does not exist");
@@ -62,7 +64,8 @@ async function routes(fastify, options) {
 
             if (userData[key]) {
                 delete userData[key];
-                await writeFile(`${userDataPath}/${userID}/keys.json`, JSON.stringify(userData));
+                let dataToWrite = JSON.stringify(userData, null, 2);
+                await writeFile(`${userDataPath}/${userID}/keys.json`, dataToWrite);
                 return reply.code(200).send({body: `Resource deleted for user ${email}`});
             } else
                 throw new ServerError(400, "The resource to delete does not exist");

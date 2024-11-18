@@ -1,5 +1,5 @@
-import {readFile, writeFile, mkdir} from 'fs/promises';
-import {existsSync} from 'fs'
+import {readFile, writeFile, mkdir} from "fs/promises";
+import {existsSync} from "fs"
 
 async function testServer(endpoint, method, tokenFile, msg) {
     let jwtToken;
@@ -37,12 +37,12 @@ async function testServer(endpoint, method, tokenFile, msg) {
 
 
 async function normalTests() {
-    let tests = JSON.parse(await readFile('data/tests.json', 'utf-8'));
+    let tests = JSON.parse(await readFile("data/tests.json", "utf-8"));
+    if (!existsSync("tokens"))
+        await mkdir("tokens")
 
     let i = 1;
     for (const testCase of tests) {
-        if (!existsSync('tokens'))
-            await mkdir('tokens')
         process.stdout.write(`${i}) `)
         await testServer(...testCase);
         i++;
@@ -51,10 +51,10 @@ async function normalTests() {
 
 
 async function randomizedTests(num, log = false)  {
-    let tests = JSON.parse(await readFile('data/tests.json', 'utf-8'))
+    let tests = JSON.parse(await readFile("data/tests.json", "utf-8"))
     let testHistory = [];
-    if (!existsSync('tokens'))
-        await mkdir('tokens')
+    if (!existsSync("tokens"))
+        await mkdir("tokens")
 
     for (let i = 0; i < num; i++) {
         let rnd = Math.floor(Math.random() * tests.length);
@@ -66,9 +66,10 @@ async function randomizedTests(num, log = false)  {
     testHistory.push(tests[30]);
     testHistory.push(tests[31]);
     if (log) {
-        let newlineJson = JSON.stringify(testHistory).replaceAll("],", "],\n");
-        await writeFile(`data/testsHistory.json`, newlineJson);
+        let dataToWrite = JSON.stringify(testHistory, null, 2);
+        await writeFile(`data/testsHistory.json`, dataToWrite);
     }
 }
 
-await normalTests()
+
+await normalTests();

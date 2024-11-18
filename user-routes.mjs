@@ -21,7 +21,7 @@ async function routes(fastify, options) {
             const hashedPassword = createHash("sha256")
                 .update(password).digest("hex");
 
-            // reading the users' file, checking if there's already a user
+            // reading the users" file, checking if there"s already a user
             // registered under the current email; if not so, adding new email and password to file
             let users = JSON.parse(await readFile("data/users.json", "utf-8"));
 
@@ -32,7 +32,8 @@ async function routes(fastify, options) {
                 users[email].password = hashedPassword;
 
                 // save the user login info in the users.json file
-                await writeFile("data/users.json", JSON.stringify(users));
+                let dataToWrite = JSON.stringify(users, null, 2);
+                await writeFile("data/users.json", dataToWrite);
 
                 // each user will post their {key, value} pairs in a separate directory
                 // each user can retrieve only their own data
@@ -52,7 +53,7 @@ async function routes(fastify, options) {
             const hashedPassword = createHash("sha256")
                 .update(password).digest("hex");
 
-            // reading the users' file, checking if there's already a user
+            // reading the users" file, checking if there"s already a user
             // registered under the current email, finally add the new user to the file
             let users = JSON.parse(await readFile("data/users.json", "utf-8"));
 
@@ -61,7 +62,7 @@ async function routes(fastify, options) {
             else if (users[email].password === hashedPassword) {
                 let isAdmin = email === "admin@admin.admin";
                 const payload = {email, isAdmin};
-                const token = jwt.sign(payload, secretKey, {expiresIn: '48h'});
+                const token = jwt.sign(payload, secretKey, {expiresIn: "48h"});
                 return reply.code(200).send({token});
             } else
                 throw new ServerError(400, "Invalid password");
@@ -75,9 +76,10 @@ async function routes(fastify, options) {
         let users = JSON.parse(await readFile("data/users.json", "utf-8"));
         delete users[email];
 
-        // remove the directory storing user data and update user info
+        // remove the directory storing user data and update user login info
         await rm(`${userDataPath}/${userID}`, {recursive: true, force: true});
-        await writeFile("data/users.json", JSON.stringify(users));
+        let dataToWrite = JSON.stringify(users, null, 2)
+        await writeFile("data/users.json", dataToWrite);
 
         reply.code(200).send({body: `Successfully deleted user ${email} and all their data`});
     });

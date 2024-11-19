@@ -1,7 +1,7 @@
-import {writeFile} from "fs/promises";
 import {authenticateAndLoadData} from "./pre-handlers.mjs";
 import {postSchema, patchSchema} from "./schemas.mjs";
 import {ServerError} from "./errors.mjs";
+import {writeFile} from "fs/promises";
 
 // each user has their own directory under "data/users-data" to store and read their own data
 // the admin can access and modify data within all user directories
@@ -14,7 +14,6 @@ async function routes(fastify, options) {
             const {email, userID, userData} = req.userInfo;
             const {key, data} = req.body;
 
-            // Add the data. If the key already exists, don't do anything and return an error
             if (userData[key])
                 throw new ServerError(400, "The key already exists")
             else {

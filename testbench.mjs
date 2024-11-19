@@ -1,12 +1,37 @@
-import {readFile, writeFile, mkdir} from "fs/promises";
-import {existsSync} from "fs"
+import {readFile, writeFile, mkdir, rm} from "fs/promises";
+import {existsSync, createWriteStream} from "fs";
+import {Worker, isMainThread, threadId, BroadcastChannel} from "worker_threads";
+import {fileURLToPath} from "url";
+import {Mutex} from "async-mutex";
 
-async function testServer(endpoint, method, tokenFile, msg) {
+const mutex = new Mutex();
+await performTests({numThreads: 10, numRandomized: 30});
+
+async function performTests(options) {
+    if (options?.numThreads) {
+        if (isMainThread) {
+            let totalThreads = options?.numThreads;
+            const __filename = fileURLToPath(import.meta.url);
+            for (let index = 0; index < totalThreads; index++) {
+                new Worker(__filename);
+            }
+        } else if (options?.numRandomized)
+            await randomizedTests(options?.numRandomized, true, `result-logs/Thread ${threadId}`)
+        else
+            await normalTests(`result-logs/Thread ${threadId}`)
+    } else { // single threaded case
+        if (options?.numRandomized)
+            await randomizedTests(options?.numRandomized, true)
+        else
+            await normalTests()
+    }
+}
+
+async function sendRequest(resultStream, endpoint, method, tokenFile, msg) {
     let jwtToken;
     try {
         jwtToken = await readFile(`tokens/${tokenFile}`);
-    } catch (e) {
-    }
+    } catch (e) {}
 
     let headers, body;
     if (["POST", "PUT", "PATCH"].includes(method)) {
@@ -15,61 +40,84 @@ async function testServer(endpoint, method, tokenFile, msg) {
             "Authorization": `Bearer ${jwtToken}`
         };
         body = JSON.stringify(msg);
-    } else { // GET, DELETE
-        headers = {
-            "Authorization": `Bearer ${jwtToken}`
-        };
-    }
+    } else  // GET, DELETE
+        headers = {"Authorization": `Bearer ${jwtToken}`};
 
     try {
         let url = `http://localhost:3000${endpoint}`;
         let res = await fetch(url, {method, headers, body});
         let responseBody = await res.json();
-        console.log(responseBody, `\n`);
+
+        if (resultStream)
+            resultStream.write(`${JSON.stringify(responseBody)}\n`);
+        else
+            console.log(responseBody, `\n`);
 
         // in the login case, write the new token if the request was successful
-        if (url.endsWith("login") && responseBody.token)
+        if (url.endsWith("login") && responseBody.token) {
+            const release = await mutex.acquire();
             await writeFile(`tokens/${tokenFile}`, responseBody.token);
+            release();
+        }
     } catch (e) {
         console.error(e);
     }
 }
 
 
-async function normalTests() {
-    let tests = JSON.parse(await readFile("data/tests.json", "utf-8"));
+async function normalTests(resultLogFile) {
+    const tests = JSON.parse(await readFile("data/tests.json", "utf-8"));
     if (!existsSync("tokens"))
         await mkdir("tokens")
 
-    let i = 1;
-    for (const testCase of tests) {
-        process.stdout.write(`${i}) `)
-        await testServer(...testCase);
-        i++;
+    let resultStream;
+    if (resultLogFile) {
+        if (!existsSync(resultLogFile.split("/")[0]))
+            await mkdir(resultLogFile.split("/")[0]);
+        resultStream = await createStream(resultLogFile);
     }
+
+    for (const testCase of tests)
+        await sendRequest(resultStream, ...testCase);
 }
 
 
-async function randomizedTests(num, log = false)  {
+async function randomizedTests(num, logRequests = false, resultLogFile) {
     let tests = JSON.parse(await readFile("data/tests.json", "utf-8"))
     let testHistory = [];
     if (!existsSync("tokens"))
         await mkdir("tokens")
 
-    for (let i = 0; i < num; i++) {
-        let rnd = Math.floor(Math.random() * tests.length);
-        process.stdout.write(`${i}) `)
-        await testServer(...(tests[rnd]));
-        if (log) testHistory.push(tests[rnd]);
+    let resultStream;
+    if (resultLogFile) {
+        if (!existsSync(resultLogFile.split("/")[0]))
+            await mkdir(resultLogFile.split("/")[0]);
+        resultStream = await createStream(resultLogFile);
     }
 
-    testHistory.push(tests[30]);
-    testHistory.push(tests[31]);
-    if (log) {
+    for (let i = 0; i < num; i++) {
+        let rnd = Math.floor(Math.random() * tests.length);
+        await sendRequest(resultStream, ...(tests[rnd]));
+        if (logRequests)
+            testHistory.push(tests[rnd]);
+    }
+
+    if (logRequests) {
+        testHistory.push(tests[30]);
+        testHistory.push(tests[31]);
         let dataToWrite = JSON.stringify(testHistory, null, 2);
-        await writeFile(`data/testsHistory.json`, dataToWrite);
+        await writeFile("data/testsHistory.json", dataToWrite);
     }
 }
 
-
-await normalTests();
+async function createStream(logFile) {
+    try {
+        if (logFile) {
+            if (existsSync(logFile))
+                await rm(logFile);
+            return createWriteStream(logFile, {flags: 'a'});
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}

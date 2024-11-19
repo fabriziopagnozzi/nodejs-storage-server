@@ -1,10 +1,12 @@
-import {mkdir, readFile, writeFile, rm} from "fs/promises";
+import {mkdir, readFile, rm, writeFile} from "fs/promises";
 import {createHash} from "crypto";
 import jwt from "jsonwebtoken";
 import {getUserID} from "./auth-utils.mjs";
 import {authenticate} from "./pre-handlers.mjs";
 import {userLoginSchema} from "./schemas.mjs";
 import {ServerError} from "./errors.mjs";
+import {mutex} from "./app.mjs";
+import {existsSync} from "fs";
 
 // the key used to generate and validate tokens is unique and stored in the key.txt file
 const secretKey = await readFile("data/key.txt", "utf-8");
@@ -17,11 +19,13 @@ async function routes(fastify, options) {
 
     fastify.post("/register", {schema: {body: userLoginSchema}},
         async (req, reply) => {
+            req.release = await mutex.acquire();
+
             const {email, password} = req.body;
             const hashedPassword = createHash("sha256")
                 .update(password).digest("hex");
 
-            // reading the users" file, checking if there"s already a user
+            // reading the users' file, checking if there"s already a user
             // registered under the current email; if not so, adding new email and password to file
             let users = JSON.parse(await readFile("data/users.json", "utf-8"));
 
@@ -33,12 +37,13 @@ async function routes(fastify, options) {
 
                 // save the user login info in the users.json file
                 let dataToWrite = JSON.stringify(users, null, 2);
-                await writeFile("data/users.json", dataToWrite);
+                await writeFile("data/users.json", dataToWrite)
 
                 // each user will post their {key, value} pairs in a separate directory
                 // each user can retrieve only their own data
                 let userID = await getUserID(email);
-                await mkdir(`${userDataPath}/${userID}`, {recursive: true});
+                if (!existsSync(`${userDataPath}/${userID}`))
+                    await mkdir(`${userDataPath}/${userID}`, {recursive: true});
                 await writeFile(`${userDataPath}/${userID}/keys.json`, "{}");
 
                 return reply.code(200).send({body: `User ${email} correctly registered`});
@@ -49,16 +54,18 @@ async function routes(fastify, options) {
 
     fastify.post("/login", {schema: {body: userLoginSchema}},
         async (req, reply) => {
+            req.release = await mutex.acquire();
+
             const {email, password} = req.body;
             const hashedPassword = createHash("sha256")
                 .update(password).digest("hex");
 
-            // reading the users" file, checking if there"s already a user
+            // reading the users' file, checking if there"s already a user
             // registered under the current email, finally add the new user to the file
             let users = JSON.parse(await readFile("data/users.json", "utf-8"));
 
             if (!users[email])
-                throw new ServerError(403, "Unauthorized, user doesn't exist");
+                throw new ServerError(403, `No user registered under the email ${email}`);
             else if (users[email].password === hashedPassword) {
                 let isAdmin = email === "admin@admin.admin";
                 const payload = {email, isAdmin};
@@ -77,9 +84,11 @@ async function routes(fastify, options) {
         delete users[email];
 
         // remove the directory storing user data and update user login info
-        await rm(`${userDataPath}/${userID}`, {recursive: true, force: true});
+        if (existsSync(`${userDataPath}/${userID}`))
+            await rm(`${userDataPath}/${userID}`, {recursive: true, force: true});
+
         let dataToWrite = JSON.stringify(users, null, 2)
-        await writeFile("data/users.json", dataToWrite);
+        await writeFile("data/users.json", dataToWrite)
 
         reply.code(200).send({body: `Successfully deleted user ${email} and all their data`});
     });

@@ -10,13 +10,11 @@ const userDataPath = "data/users-data";
 async function verifyToken(req) {
     const token = req.headers.authorization.split(" ")[1]; // Bearer <token>
 
-    // decode the token and get email and user role
     const {email, isAdmin} = jwt.verify(token, secretKey);
-    let users = JSON.parse(await readFile("data/users.json", "utf8"));
+    let users = JSON.parse(await readFile("data/users.json", "utf-8"));
 
-    // if the email doesn't exist anymore in the users.json, throw an error
     if (!users[email])
-        throw new ServerError(403, "Unauthorized, user doesn't exist");
+        throw new ServerError(403, `No user registered under the email ${email}`);
     else if (isAdmin && req.query.user)
         // the admin can do anything to any possible user specified in the user query argument
         return req.query.user;
@@ -27,14 +25,15 @@ async function verifyToken(req) {
 
 async function getUserID(email) {
     let ID, users;
-    users = JSON.parse(await readFile("data/users.json", "utf-8")); // assumed to exist
+    users = JSON.parse(await readFile("data/users.json", "utf-8"));
 
     if (!users[email])
-        throw new ServerError(404, `No user registered under the email ${email}`);
+        throw new ServerError(403, `No user registered under the email ${email}`);
     else if (users[email] && !users[email].userID) {
         ID = uuidv4();
         users[email].userID = ID;
-        await writeFile("data/users.json", JSON.stringify(users, null, 2));
+        let dataToWrite = JSON.stringify(users, null, 2);
+        await writeFile("data/users.json", dataToWrite)
     } else
         ID = users[email].userID;
 

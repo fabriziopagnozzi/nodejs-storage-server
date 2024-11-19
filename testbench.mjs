@@ -1,27 +1,28 @@
-import {readFile, writeFile, mkdir, rm} from "fs/promises";
-import {existsSync, createWriteStream} from "fs";
-import {Worker, isMainThread, threadId, BroadcastChannel} from "worker_threads";
+import {mkdir, readFile, rm, writeFile} from "fs/promises";
+import {createWriteStream, existsSync} from "fs";
+import {isMainThread, threadId, Worker} from "worker_threads";
 import {fileURLToPath} from "url";
 import {Mutex} from "async-mutex";
 
 const mutex = new Mutex();
-await performTests({numThreads: 10, numRandomized: 30});
+await performTests({numThreads: 20});
 
 async function performTests(options) {
     if (options?.numThreads) {
         if (isMainThread) {
-            let totalThreads = options?.numThreads;
+            let totalThreads = options.numThreads;
             const __filename = fileURLToPath(import.meta.url);
             for (let index = 0; index < totalThreads; index++) {
                 new Worker(__filename);
             }
         } else if (options?.numRandomized)
-            await randomizedTests(options?.numRandomized, true, `result-logs/Thread ${threadId}`)
+            await randomizedTests(options.numRandomized, true, `result-logs/Thread ${threadId}`)
         else
             await normalTests(`result-logs/Thread ${threadId}`)
-    } else { // single threaded case
+    } else {
+        // single threaded case
         if (options?.numRandomized)
-            await randomizedTests(options?.numRandomized, true)
+            await randomizedTests(options.numRandomized, true)
         else
             await normalTests()
     }
@@ -53,7 +54,7 @@ async function sendRequest(resultStream, endpoint, method, tokenFile, msg) {
         else
             console.log(responseBody, `\n`);
 
-        // in the login case, write the new token if the request was successful
+            // in the login case, write the new token if the request was successful
         if (url.endsWith("login") && responseBody.token) {
             const release = await mutex.acquire();
             await writeFile(`tokens/${tokenFile}`, responseBody.token);
@@ -70,12 +71,7 @@ async function normalTests(resultLogFile) {
     if (!existsSync("tokens"))
         await mkdir("tokens")
 
-    let resultStream;
-    if (resultLogFile) {
-        if (!existsSync(resultLogFile.split("/")[0]))
-            await mkdir(resultLogFile.split("/")[0]);
-        resultStream = await createStream(resultLogFile);
-    }
+    let resultStream = await createStream(resultLogFile);
 
     for (const testCase of tests)
         await sendRequest(resultStream, ...testCase);
@@ -84,29 +80,19 @@ async function normalTests(resultLogFile) {
 
 async function randomizedTests(num, logRequests = false, resultLogFile) {
     let tests = JSON.parse(await readFile("data/tests.json", "utf-8"))
-    let testHistory = [];
     if (!existsSync("tokens"))
         await mkdir("tokens")
 
-    let resultStream;
-    if (resultLogFile) {
-        if (!existsSync(resultLogFile.split("/")[0]))
-            await mkdir(resultLogFile.split("/")[0]);
-        resultStream = await createStream(resultLogFile);
-    }
+    let resultStream = await createStream(resultLogFile);
+    let requestsStream;
+    if (logRequests)
+        requestsStream = await createStream(`request-logs/Thread ${threadId}`);
 
     for (let i = 0; i < num; i++) {
         let rnd = Math.floor(Math.random() * tests.length);
         await sendRequest(resultStream, ...(tests[rnd]));
         if (logRequests)
-            testHistory.push(tests[rnd]);
-    }
-
-    if (logRequests) {
-        testHistory.push(tests[30]);
-        testHistory.push(tests[31]);
-        let dataToWrite = JSON.stringify(testHistory, null, 2);
-        await writeFile("data/testsHistory.json", dataToWrite);
+            requestsStream.write(JSON.stringify(tests[rnd], null, 2));
     }
 }
 
@@ -115,6 +101,9 @@ async function createStream(logFile) {
         if (logFile) {
             if (existsSync(logFile))
                 await rm(logFile);
+            if (!existsSync(logFile.split("/")[0]))
+                await mkdir(logFile.split("/")[0]);
+
             return createWriteStream(logFile, {flags: 'a'});
         }
     } catch (e) {
